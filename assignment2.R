@@ -824,3 +824,298 @@ plot(x = train$Category, y = train$DayOfWeek, main = "visualisation of category 
 pie.train<-table(train$PdDistrict)
 pie(pie.train,main = "Visualisation with pie chart by Police department district")
 
+
+
+
+
+##### 2nd attempt
+
+
+
+
+
+library(caret)
+library(glmnet)
+#install.packages("ROCR")
+library(ROCR)
+library(mlogit)
+library(mnlogit)
+
+#xaux <- read.table("data/2015s2-mo444-assignment-02.csv", header = TRUE, sep = ",")
+xaux<-read.table("data/pentaho_category_word_wordsplit_day26_trainingR.txt", header = TRUE, sep = ",", nrows = 350000)
+xaux<-read.table("data/pentaho_category_word_wordsplit_day26_trainingR.txt", header = TRUE, sep = ",")
+
+xvld<-read.table("data/pentaho_category_word_wordsplit_day26_validationR.txt", header = TRUE, sep = ",")
+#xtst<-read.table("data/pentaho_category_word_wordsplit_day26_testR.txt", header = TRUE, sep = ",")
+
+
+
+###############
+# vector of 1 or 0 when find k-value
+##############
+binomialvector <- function(y,k,ycompare) {
+        x<-ycompare[,1]
+        ini<-1
+        fin<-length(y)
+        w<-0
+        for (i in ini:fin) {
+                if(y[i, 1]==k){
+                        x[i]<-ycompare[i]
+                        if(w==0){
+                                cat(i,ycompare[i]," (",k,") \n")
+                                w<-1
+                        }
+                        
+                        else {
+                                x[i]<-""
+                        }
+                }
+        }
+        return(x)
+}
+###############
+predictvector <- function(y, ypredict) {
+        x<-y
+        ini<-1
+        fin<-length(y)
+        w<-0
+        for (i in ini:fin) {
+                if(y[i,1]==1){
+                        #cat("ypredict(",i,")=",ypredict[i,1],"\n")
+                        if(ypredict[i,1]>0.5) { # 0.001
+                                if(w==0){
+                                        cat("ypredict(",i,")=",ypredict[i,1],"\n")
+                                        w<-1
+                                }
+                                
+                                x[i,1]<-1
+                        } else {
+                                x[i,1]<-0
+                        }
+                }
+        }
+        
+        return(x)
+}
+###############
+binomialpredictvector <- function(y, ypredict,xaux) {
+        x<-y
+        ini<-1
+        fin<-length(y)
+        w<-0
+        for (i in ini:fin) {
+                if(y[i,1]==1){
+                        #cat("ypredict(",i,")=",ypredict[i,1],"\n")
+                        if(ypredict[i,1]>0.5) { # 0.001
+                                cat("ypredict(",i,")=",ypredict[i,1],"\n")
+                                x[i,1]<-xaux[i,1]
+                        } else {
+                                x[i,1]<-""
+                        }
+                } else {
+                        x[i,1]<-""
+                }
+        }
+        
+        return(x)
+}
+
+###############
+# vector of 1 or 0 when find k-value
+##############
+binaryvector <- function(y,k,ycompare) {
+        x<-y
+        ini<-1
+        fin<-length(y)
+        w<-0
+        for (i in ini:fin) {
+                if(y[i,1]==k){
+                        x[i,1]<-1
+                        if(w==0){
+                                cat(ycompare[i,1]," (",k,") \n")
+                                w<-1
+                        }
+                        
+                } else {
+                        x[i,1]<-0
+                }
+        }
+        
+        return(x)
+}
+
+###############
+#########################################
+# Run assignment 2: Logistic Regression #
+#########################################
+logreg2 <- function(cat,xaux,fm) {
+        y<-factor(xaux[,1])
+        y<-as.numeric(y)
+        y<-as.matrix(y)
+        yy<-xaux[,1]
+        #yy<-as.matrix(yy)
+        x<-xaux
+        x[,1]<-factor(x[,1])
+        #x[,2]<-factor(x[,2])
+        #x[,4]<-factor(x[,4])
+        #x[,5]<-factor(x[,5])
+        #x[,6]<-factor(x[,6])
+        x[,7]<-factor(x[,7])
+        xx<-x
+        xx[,1]<-as.numeric(xx[,1])
+        #xx[,2]<-as.numeric(xx[,2])
+        #xx[,4]<-as.numeric(xx[,4])
+        #xx[,5]<-as.numeric(xx[,5])
+        #xx[,6]<-as.numeric(xx[,6])
+        xx[,7]<-as.numeric(xx[,7])
+        head(x,n=10)
+        head(xx,n=10)
+        yy<-as.matrix(yy)
+        head(yy)
+        
+        y1<-binaryvector(y,cat,yy)
+        fm2<-as.formula(y1~fm)
+        #mylogit <- glm(y1~DayOfWeek + PdDistrict + Address + Resolution + X + Y, data = xx, family = binomial("logit"))
+        #mylogit <- glm(y1~word+DayOfWeek + PdDistrict + Hours + Address + Resolution + X + Y, data = xx, family = binomial("logit"))
+        #
+        mylogit <- glm(y1~word+DayOfWeek + PdDistrict + Hours + X + Y, data = xx, family = binomial("logit"))
+        #
+        #mylogit <- glm(y1 ~ DayOfWeek, data = xx, family = binomial("logit"))
+        #mylogit <- glm(y1 ~ Hour, data = xx, family = binomial("logit"))
+        #mylogit <- glm(y1 ~ word+DayOfWeek + PdDistrict + Resolution + 
+        #           Address + Hour + X + Y + Hour * word + PdDistrict * Address
+        #           + word^2
+        #           , data = xx, family = binomial("logit"))
+        #
+        #
+        #cf<-coef(mylogit)
+        #summary(mylogit)
+        #anova(mylogit,test="Chisq")
+        
+        mylogit.pred<-predict.glm(mylogit, probability=FALSE, type="response")
+        #head(mylogit.pred)
+        mylogit.v<-y1
+        mylogit.pred<-as.matrix(mylogit.pred)
+        mylogit.predt<-predictvector(y1,mylogit.pred)
+        x<-table(mylogit.predt==1) #check if all zero
+        n<-dim(x)
+        if(n==2) {cat ("RELY ON CM \n")} else {cat("NOT RELY ON CM \n")}
+        #mylogiredt<-ifelse(mylogit.pred>0.5,1,0)
+        confm<-confusionMatrix(mylogit.predt,mylogit.v)
+        #roc.plot(mylogit.v, mylogt.predt)
+        return(list(mylogit,confm))
+}
+
+### Run manually
+for (i in 1:4){
+        print(i)
+        
+        cat = i
+        y<-factor(xaux[,1])
+        y<-as.numeric(y)
+        y<-as.matrix(y)
+        yy<-xaux[,1]
+        #yy<-as.matrix(yy)
+        x<-xaux
+        x[,1]<-factor(x[,1])
+        #x[,2]<-factor(x[,2])
+        #x[,4]<-factor(x[,4])
+        #x[,5]<-factor(x[,5])
+        #x[,6]<-factor(x[,6])
+        x[,7]<-factor(x[,7])
+        xx<-x
+        xx[,1]<-as.numeric(xx[,1])
+        #xx[,2]<-as.numeric(xx[,2])
+        #xx[,4]<-as.numeric(xx[,4])
+        #xx[,5]<-as.numeric(xx[,5])
+        #xx[,6]<-as.numeric(xx[,6])
+        xx[,7]<-as.numeric(xx[,7])
+        head(x,n=10)
+        head(xx,n=10)
+        yy<-as.matrix(yy)
+        head(yy)
+        
+        y1<-binaryvector(y,cat,yy)
+        #Using GLM
+        mylogit <- glm(y1~ word + DayOfWeek  + X + Y, data = xx, family = binomial("logit"))
+        
+        ## using mnlogit
+        #system.time(training.long <- mlogit.data(xaux, shape  = "wide", choice = "Category"))
+        #system.time(model.baseLine <- mnlogit(Category ~ 1 | word + DayOfWeek  + X + Y  + 0 | 1, data = training.long, ncores = 3))
+        
+        
+        mylogit.pred<-predict.glm(mylogit, probability=FALSE, type="response")
+        #head(mylogit.pred)
+        mylogit.v<-y1
+        mylogit.pred<-as.matrix(mylogit.pred)
+        mylogit.predt<-predictvector(y1,mylogit.pred)
+        #x<-table(mylogit.predt==1) #check if all zero
+        #n<-dim(x)
+        #if(n==2) {cat ("RELY ON CM \n")} else {cat("NOT RELY ON CM \n")}
+        #mylogiredt<-ifelse(mylogit.pred>0.5,1,0)
+        #confm<-confusionMatrix(mylogit.predt,mylogit.v)
+        
+        ### Yukio modification##
+        #results <- data.frame()
+        ## Store the number
+        ## get the number of FALSE and compare to the nrows (605249)
+        results[cat,1] <- as.matrix(table(mylogit.pred > 0.5)[1]) 
+        print(confusionMatrix(mylogit.predt,mylogit.v))
+        tmp <- table(mylogit.predt, mylogit.v)
+        results[cat,2] <- sum(diag(tmp))/sum(tmp)
+        results[cat,3] <- date()
+        saveRDS(results, file = "results.rds")
+}
+#
+
+##nnet
+nn.model <- multinom(Category ~  word  + DayOfWeek + X + Y , data = xaux)
+nn.model
+nn.predicted <- predict(nn.model)
+nn.confm <- confusionMatrix(nn.predicted, xaux$Category)
+nn.confm
+
+
+## Removing Descript
+##Is it possible to predict the kind of crime only based on 
+## DayOfWeek, PdDistrict, Longitude, Latitude?
+nn.model <- multinom(Category ~  DayOfWeek + PdDistrict + X + Y , data = xaux)
+nn.model
+nn.predicted <- predict(nn.model)
+nn.confm <- confusionMatrix(nn.predicted, xaux$Category)
+nn.confm
+
+# Removing Descript
+## Try to improve the accuracy
+nn.model <- multinom(Category ~  Hours + DayOfWeek + PdDistrict + X + Y , data = xaux)
+nn.model
+nn.predicted <- predict(nn.model)
+nn.confm <- confusionMatrix(nn.predicted, xaux$Category)
+nn.confm
+
+
+## using mnlogit
+system.time(training.long <- mlogit.data(xaux, shape  = "wide", choice = "Category"))
+system.time(model.baseLine <- mnlogit(Category ~ 1 | word + DayOfWeek + 0 | 1, data = training.long, ncores = 3))
+predicted.training <- predict(model.baseLine, probability = FALSE, newdata = training.long)
+conf.matrix.model.baseline <- confusionMatrix(data = predicted.training, reference = xaux$Category)
+### Using the validation
+system.time(xvld.long <- mlogit.data(xvld, shape  = "wide", choice = "Category"))
+predicted.validation <- predict(model.baseLine, probability = FALSE, newdata = xvld.long)
+conf.matrix.model.baseline <- confusionMatrix(data = predicted.validation, reference = xvld$Category)
+
+
+
+#system.time(training.long <- mlogit.data(xaux, shape  = "wide", choice = "Category"))
+system.time(model.baseLine <- mnlogit(Category ~ 1 | Hours + DayOfWeek + PdDistrict + X + Y + 0 | 1, data = training.long, ncores = 3))
+predicted.training <- predict(model.baseLine, probability = FALSE, newdata = training.long)
+conf.matrix.model.baseline <- confusionMatrix(data = predicted.training, reference = xaux$Category)
+###
+
+## Working with Address
+training.table <- sort(table(training$Address), decreasing = T)
+nochange <- training.table[1:30]
+nochange.df <- data.frame(nochange)
+nochange.df$Address <- rownames(nochange.df)
+training$Address <- (ifelse(training$Address %in% nochange.df$Address, as.factor(training$Address), as.factor(c("-1000"))))
+###########################################################
